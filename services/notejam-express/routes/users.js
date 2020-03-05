@@ -1,14 +1,13 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('http')
 var orm = require('orm');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
-var bcrypt = require('bcrypt');
+var bcrypt = require('bcryptjs');
 var nodemailer = require('nodemailer');
 var stubTransport = require('nodemailer-stub-transport');
 
-var helpers = require('../helpers')
+var helpers = require('../helpers');
 var settings = require('../settings');
 
 // Sign Up
@@ -178,7 +177,7 @@ function findByUsername(username, fn) {
     db.load("../models", function (err) {
       var User = db.models.users;
       db.models.users.find({email: username}, function (err, users) {
-        if (users.length) {
+        if (users && users.length) {
           return fn(null, users[0]);
         } else {
           return fn(null, null);
