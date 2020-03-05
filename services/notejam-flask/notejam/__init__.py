@@ -17,6 +17,11 @@ from_env = {'production': ProductionConfig,
 # @TODO use application factory approach
 app = Flask(__name__)
 app.config.from_object(from_env[os.environ.get('ENVIRONMENT', 'testing')])
+if os.environ.get('ENVIRONMENT') == 'production':
+    import sqlalchemy
+    engine = sqlalchemy.create_engine(ProductionConfig.ROOT_DATABASE_URI)
+    engine.execute("CREATE SCHEMA IF NOT EXISTS %s;" % os.environ.get('DATABASE_SCHEMA'))
+    engine.execute("USE master;")
 db = SQLAlchemy(app)
 
 

@@ -10,8 +10,18 @@ class Config(object):
 
 
 class ProductionConfig(Config):
-    DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = "mysql://%s:%s@%s/%s" % (
+        os.environ.get('DATABASE_USERNAME'),
+        os.environ.get('DATABASE_PASSWORD'),
+        os.environ.get('DATABASE_ENDPOINT'),
+        os.environ.get('DATABASE_SCHEMA')
+    )
+    ROOT_DATABASE_URI = "mysql://%s:%s@%s" % (
+        os.environ.get('DATABASE_USERNAME'),
+        os.environ.get('DATABASE_PASSWORD'),
+        os.environ.get('DATABASE_ENDPOINT')
+    )
 
 
 class DevelopmentConfig(Config):
