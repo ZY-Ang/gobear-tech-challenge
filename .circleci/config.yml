@@ -11,7 +11,7 @@ master_only: &master_only
 executors:
   node_python_default:
     docker:
-      - image: circleci/python-nodejs:python3.6-nodejs12
+      - image: circleci/node:12.13.0
 
 orbs:
   aws-ecr: circleci/aws-ecr@0.0.4
