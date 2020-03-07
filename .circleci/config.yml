@@ -1,0 +1,119 @@
+version: 2.1
+
+defaults: &config_project_defaults
+  working_directory: ~/repo
+
+master_only: &master_only
+  filters:
+    branches:
+      only: master
+
+executors:
+  node_python_default:
+    docker:
+      - image: circleci/python-nodejs:python3.6-nodejs12
+
+orbs:
+  aws-ecr: circleci/aws-ecr@0.0.4
+
+commands:
+  configure_aws:
+    description: "Sets up AWS profiles, CLI and configuration"
+    steps:
+      - run:
+          name: Install AWS CLI v2
+          working_directory: ~/
+          command: |
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            ./aws/install
+      - run:
+          name: Configure AWS Access Key ID
+          command: aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile gobear
+      - run:
+          name: Configure AWS Secret Access Key
+          command: aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile gobear
+      - run:
+          name: Configure AWS default region
+          command: aws configure set region $AWS_REGION --profile gobear
+  test_build_frontend:
+    description: "Installs, tests and builds the frontend"
+    steps:
+      - run:
+          working_directory: ~/repo/frontend
+          command: npm test
+      - run:
+          working_directory: ~/repo/frontend
+          command: npm run build
+
+jobs:
+  flask_test_build_deploy:
+    <<: *config_project_defaults
+    executor: node_python_default
+    steps:
+      - setup_remote_docker
+      - checkout
+      - configure_aws
+      - run:
+          name: Build & Run Tests for Flask App Container
+          working_directory: ~/repo/services/notejam-flask
+          command: >-
+            docker build
+            --build-arg environment=production
+            --build-arg dbuser=$FLASKJAM_DB_USER
+            --build-arg dbpass=$FLASKJAM_DB_PASS
+            --build-arg dbendpoint=$FLASKJAM_DB_ENDPOINT
+            --build-arg dbschema=$FLASKJAM_DB_SCHEMA
+            -t flaskjam .
+
+  express_test_build_deploy:
+    <<: *config_project_defaults
+    executor: node_python_default
+    steps:
+      - checkout
+      - configure_aws
+      - run:
+          working_directory: ~/repo/services/notejam-flask
+          command: >-
+            docker build
+            --build-arg environment=production
+            --build-arg dbuser=$EXPRESSJAM_DB_USER
+            --build-arg dbpass=$EXPRESSJAM_DB_PASS
+            --build-arg dbendpoint=$EXPRESSJAM_DB_ENDPOINT
+            --build-arg dbschema=$EXPRESSJAM_DB_SCHEMA
+            -t expressjam .
+
+  arch_deploy_update:
+    <<: *config_project_defaults
+    executor: node_python_default
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-{{ arch }}-{{ .Branch }}-{{ checksum "backend/package-lock.json" }}-{{ checksum "backend/lambda-nodejs/package-lock.json" }}-{{ checksum "backend/lambda-python/package-lock.json" }}-{{ .Revision }}
+            - v1-{{ arch }}-{{ .Branch }}-{{ checksum "backend/package-lock.json" }}-{{ checksum "backend/lambda-nodejs/package-lock.json" }}-{{ checksum "backend/lambda-python/package-lock.json" }}
+            - v1-{{ arch }}-{{ .Branch }}
+            - v1-{{ arch }}
+      - run:
+          working_directory: ~/repo/backend
+          command: npm run install-all
+      - configure_aws
+      - save_cache:
+          paths:
+            - ~/repo/backend/node_modules
+            - ~/repo/backend/lambda-nodejs/node_modules
+            - ~/repo/backend/lambda-python/node_modules
+          key: v1-{{ arch }}-{{ .Branch }}-{{ checksum "backend/package-lock.json" }}-{{ checksum "backend/lambda-nodejs/package-lock.json" }}-{{ checksum "backend/lambda-python/package-lock.json" }}-{{ .Revision }}
+      - run:
+          working_directory: ~/repo/backend
+          command: npm run deploy-all
+
+workflows:
+  version: 2
+  master_flow:
+    jobs:
+      - arch_deploy_update:
+          <<: *master_only
+      - flask_test_build_deploy:
+          requires:
+            - arch_deploy_update

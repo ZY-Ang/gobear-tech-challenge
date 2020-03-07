@@ -1,0 +1,4 @@
+VPC - networking
+EKS - cluster, controlplane
+ALB
+ECR
