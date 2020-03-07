@@ -4,7 +4,8 @@
   "description": "",
   "main": "serverless.yml",
   "scripts": {
-    "deploy": "serverless deploy --aws-profile gobear --stage prod"
+    "deploy-all": "npm run deploy-ecr",
+    "deploy-ecr": "cd arch/ecr && serverless deploy --aws-profile gobear --stage prod"
   },
   "repository": {
     "type": "git",
@@ -17,6 +18,11 @@
   },
   "homepage": "https://github.com/ZY-Ang/gobear-tech-challenge#readme",
   "devDependencies": {
-    "serverless": "^1.65.0"
+    "aws-sdk": "^2.635.0",
+    "serverless": "^1.65.0",
+    "serverless-cloudformation-changesets": "0.0.2"
+  },
+  "dependencies": {
+    "shelljs": "^0.8.3"
   }
 }
