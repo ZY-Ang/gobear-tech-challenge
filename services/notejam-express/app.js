@@ -34,7 +34,7 @@ app.use(session({cookie: { maxAge: 60000 }, secret: 'secret'}));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/express', express.static(path.join(__dirname, 'public')));
 app.use(AWSXRay.express.openSegment(`notejam-express-${(process.env.NODE_ENV || 'testing')}`));
 
 // DB configuration
@@ -76,9 +76,12 @@ app.use(function(req, res, next){
   }
 });
 
-app.use('/', users);
-app.use('/', pads);
-app.use('/', notes);
+app.get('/', function(req, res, next) {
+  res.redirect('/express');
+});
+app.use('/express', users);
+app.use('/express', pads);
+app.use('/express', notes);
 
 /// catch 404 and forward to error handler
 app.use(function(req, res, next) {

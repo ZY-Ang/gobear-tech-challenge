@@ -10,7 +10,6 @@ module.exports = {
   },
 
   formatModelErrors: function(errors) {
-    console.error(errors);
     formatted = {};
     if (errors && errors.length) {
       errors.forEach(function(e) {
@@ -22,6 +21,6 @@ module.exports = {
 
   loginRequired: function (req, res, next) {
     if (req.isAuthenticated()) { return next(); }
-    res.redirect('/signin')
+    res.redirect('/express/signin')
   }
 }

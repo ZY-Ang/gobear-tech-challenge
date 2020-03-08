@@ -12,7 +12,7 @@ module.exports = {
     var self = this;
     return function(done) {
       agent
-        .post(self.url('/signin'))
+        .post(self.url('/express/signin'))
         .send(user)
         .end(onResponse);
 
