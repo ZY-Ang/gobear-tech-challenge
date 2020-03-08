@@ -35,6 +35,12 @@ def create_tables():
     db.create_all()
 
 
+@app.route('/health', methods=['GET'])
+@app.route('/health/', methods=['GET'])
+def return_ok():
+    return '', 200
+
+
 login_manager = LoginManager()
 login_manager.login_view = "signin"
 login_manager.init_app(app)
