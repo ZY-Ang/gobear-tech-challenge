@@ -25,8 +25,6 @@ ENV DATABASE_SCHEMA=$dbschema
 
 RUN node db.js
 
-ENTRYPOINT [ "npm" ]
+EXPOSE 3000
 
-CMD [ "start" ]
-
-EXPOSE 3000/tcp
+CMD npm start

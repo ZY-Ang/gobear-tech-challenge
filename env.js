@@ -105,5 +105,5 @@ module.exports = run;
 
 run().catch(err => {
     console.error(err);
-    shell.exit(1);
+    process.exit(1);
 });

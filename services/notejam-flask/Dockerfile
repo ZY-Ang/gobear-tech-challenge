@@ -24,8 +24,6 @@ ENV DATABASE_ENDPOINT=$dbendpoint
 ARG dbschema
 ENV DATABASE_SCHEMA=$dbschema
 
-ENTRYPOINT [ "python" ]
+EXPOSE 5000
 
-CMD [ "runserver.py" ]
-
-EXPOSE 5000/tcp
+CMD python runserver.py

@@ -4,8 +4,9 @@
   "description": "",
   "main": "serverless.yml",
   "scripts": {
-    "deploy-all": "npm run deploy-ecr",
-    "deploy-ecr": "cd arch/ecr && serverless deploy --aws-profile gobear --stage prod"
+    "deploy-ecr": "cd arch/ecr && serverless deploy --aws-profile gobear --stage prod",
+    "deploy-app": "cd arch/app && serverless deploy --aws-profile gobear --stage prod",
+    "deploy-db": "cd arch/database && serverless deploy --aws-profile gobear --stage prod"
   },
   "repository": {
     "type": "git",
