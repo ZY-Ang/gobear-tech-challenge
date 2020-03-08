@@ -8,6 +8,8 @@ from notejam.config import (
     ProductionConfig,
     TestingConfig)
 import os
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
 from_env = {'production': ProductionConfig,
             'development': DevelopmentConfig,
@@ -23,6 +25,9 @@ if os.environ.get('ENVIRONMENT') == 'production':
     engine.execute("CREATE SCHEMA IF NOT EXISTS %s;" % os.environ.get('DATABASE_SCHEMA'))
     engine.execute("USE master;")
 db = SQLAlchemy(app)
+service = 'notejam-flask-' + os.environ.get('ENVIRONMENT', 'testing')
+xray_recorder.configure(service=service)
+XRayMiddleware(app, xray_recorder)
 
 
 @app.before_first_request

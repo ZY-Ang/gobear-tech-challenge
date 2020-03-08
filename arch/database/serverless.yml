@@ -46,7 +46,7 @@ resources:
         MasterUserPassword: ${{env:EXPRESSJAM_DB_PASS}}
         MaxAllocatedStorage: 1000
         MonitoringInterval: 60
-        MonitoringRoleArn: {"Fn::GetAtt": ["RDSMonitoringRole", "Arn"]}
+        MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
         MultiAZ: true
         PubliclyAccessible: true
         SourceRegion: ap-northeast
@@ -75,13 +75,13 @@ resources:
         MasterUserPassword: ${{env:FLASKJAM_DB_PASS}}
         MaxAllocatedStorage: 1000
         MonitoringInterval: 60
-        MonitoringRoleArn: {"Fn::GetAtt": ["RDSMonitoringRole", "Arn"]}
+        MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
         MultiAZ: true
         PubliclyAccessible: true
         SourceRegion: ap-northeast
         StorageType: gp2
         UseDefaultProcessorFeatures: true
-    RDSMonitoringRole:
+    RdsMonitoringRole:
       Type: AWS::IAM::Role
       Properties:
         AssumeRolePolicyDocument:

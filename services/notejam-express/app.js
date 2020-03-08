@@ -10,6 +10,7 @@ var orm = require('orm');
 var expressValidator = require('express-validator');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
+var AWSXRay = require('aws-xray-sdk');
 
 var users = require('./routes/users');
 var pads = require('./routes/pads');
@@ -34,6 +35,7 @@ app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(AWSXRay.express.openSegment(`notejam-express-${(process.env.NODE_ENV || 'testing')}`));
 
 // DB configuration
 // var sqlite3 = require('sqlite3').verbose();

@@ -15,6 +15,32 @@ resources:
   Outputs:
     Nothing:
       Value: "I am an empty stack"
+  Resources:
+    EcsTaskExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2008-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: "ecs-tasks.amazonaws.com"
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: AmazonECSTaskExecutionRolePolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Sid: ECSAllowECRAndLogs
+                  Effect: Allow
+                  Action:
+                    - ecr:GetAuthorizationToken
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:GetDownloadUrlForLayer
+                    - ecr:BatchGetImage
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: "*"
 
 custom:
   # Custom staging profiles. You may access or modify these credentials in ~/.aws/credentials

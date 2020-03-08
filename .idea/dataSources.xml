@@ -1,34 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="RDS Test" uuid="2c6fdb9f-dd39-4743-80c6-f5e869998e23">
+    <data-source source="LOCAL" name="flaskjam" uuid="7cfe1c6b-5183-46bb-8e75-b3170ce999af">
       <driver-ref>mysql.8</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
-      <jdbc-url>jdbc:mysql://database-temp.c9arhyznkpww.ap-northeast-1.rds.amazonaws.com :3306</jdbc-url>
-      <driver-properties>
-        <property name="autoReconnect" value="true" />
-        <property name="zeroDateTimeBehavior" value="CONVERT_TO_NULL" />
-        <property name="tinyInt1isBit" value="false" />
-        <property name="characterEncoding" value="utf8" />
-        <property name="characterSetResults" value="utf8" />
-        <property name="yearIsDateType" value="false" />
-      </driver-properties>
-    </data-source>
-    <data-source source="LOCAL" name="notejam" uuid="e6226490-f7fb-4557-a34b-b2804c70baa9">
-      <driver-ref>sqlite.xerial</driver-ref>
-      <synchronize>true</synchronize>
-      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\ZY\Downloads\gobear-tech-challenge\services\notejam-express\notejam.db</jdbc-url>
-      <driver-properties>
-        <property name="enable_load_extension" value="true" />
-      </driver-properties>
-    </data-source>
-    <data-source source="LOCAL" name="RDS Test 2" uuid="1d40c220-5287-4c5b-a787-d07a6b8d58b8">
-      <driver-ref>mysql.8</driver-ref>
-      <synchronize>true</synchronize>
-      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
-      <jdbc-url>jdbc:mysql://db-test2.c9arhyznkpww.ap-northeast-1.rds.amazonaws.com :3306</jdbc-url>
+      <jdbc-url>jdbc:mysql://db-flaskjam-prod.c9arhyznkpww.ap-northeast-1.rds.amazonaws.com :3306/master</jdbc-url>
       <driver-properties>
         <property name="autoReconnect" value="true" />
         <property name="zeroDateTimeBehavior" value="CONVERT_TO_NULL" />
