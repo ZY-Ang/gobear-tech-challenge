@@ -79,7 +79,7 @@ app.use(function(req, res, next){
 app.get('/', function(req, res, next) {
   res.redirect('/express');
 });
-app.get('/health', function (req, res) {
+app.all('/health', function (req, res) {
   res.status(200).send();
 });
 app.use('/express', users);

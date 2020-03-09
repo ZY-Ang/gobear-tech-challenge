@@ -4,6 +4,8 @@
 
 ## Installation & Setup
 
+## Workflow
+
 ## Architecture Overview
 
 ## Container Registry
@@ -12,10 +14,13 @@
 
 - RDS MySQL instead of in-memory/sqlite files.
 - Multi-AZ (in case of earthquakes or whatever)
-- Daily backups (snapshots that expire after 35 days)
+- Automated daily backups (snapshots that expire after 35 days)
 
 Important changes to core code - flask application can't create new note without creating a pad first.
-I would probably fix the ORM-MySQL bindings if I don't have the time constraints.
+I would probably fix the ORM-MySQL bindings if I don't have the time constraints. The database is
+publicly accessible from the internet but should work even without the `PubliclyAccessible` field set
+to `false` in `/arch/database/serverless.yml` as all resources are running within the same VPC. Only
+check if the security groups are configured correctly.
 
 ## Application
 

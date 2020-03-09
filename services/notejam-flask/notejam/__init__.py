@@ -35,8 +35,7 @@ def create_tables():
     db.create_all()
 
 
-@app.route('/health', methods=['GET'])
-@app.route('/health/', methods=['GET'])
+@app.route('/health')
 def return_ok():
     return '', 200
 
