@@ -11,36 +11,303 @@ provider:
     NODE_ENV: ${{self:provider.stage}}
     STACK_PREFIX: ${{self:service}}-${{self:provider.stage}}
 
+# Modified from vanilla CF template:
+#  https://github.com/1Strategy/fargate-cloudformation-example/blob/master/fargate.yaml
 resources:
   Outputs:
-    Nothing:
-      Value: "I am an empty stack"
+    AlbEndpoint:
+      Value: {"Fn::GetAtt": [LoadBalancer, DNSName]}
   Resources:
-    EcsTaskExecutionRole:
+    Cluster:
+      Type: AWS::ECS::Cluster
+      Properties:
+        ClusterName: ${{self:service}}-cluster
+    FlaskjamTaskDefinition:
+      Type: AWS::ECS::TaskDefinition
+      DependsOn: FlaskjamLogGroup
+      Properties:
+        Family: flaskjam-${{self:provider.stage}}-task
+        NetworkMode: awsvpc
+        RequiresCompatibilities:
+          - FARGATE
+        Cpu: 256
+        Memory: 0.5GB
+        ExecutionRoleArn: {"Ref": ExecutionRole}
+        TaskRoleArn: {"Ref": TaskRole}
+        ContainerDefinitions:
+          - Name: flaskjam-${{self:provider.stage}}-container
+            Image:  ${{cf:gb-challenge-ecr-${{self:provider.stage}}.ECRAccountUri}}/flaskjam-prod:latest
+            PortMappings:
+              - ContainerPort: 5000
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-region: ${{self:provider.region}}
+                awslogs-group: {"Ref": FlaskjamLogGroup}
+                awslogs-stream-prefix: ecs
+    ExpressjamTaskDefinition:
+      Type: AWS::ECS::TaskDefinition
+      DependsOn: ExpressjamLogGroup
+      Properties:
+        Family: expressjam-${{self:provider.stage}}-task
+        NetworkMode: awsvpc
+        RequiresCompatibilities:
+          - FARGATE
+        Cpu: 256
+        Memory: 0.5GB
+        ExecutionRoleArn: {"Ref": ExecutionRole}
+        TaskRoleArn: {"Ref": TaskRole}
+        ContainerDefinitions:
+          - Name: expressjam-${{self:provider.stage}}-container
+            Image:  ${{cf:gb-challenge-ecr-${{self:provider.stage}}.ECRAccountUri}}/expressjam-prod:latest
+            PortMappings:
+              - ContainerPort: 3000
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-region: ${{self:provider.region}}
+                awslogs-group: {"Ref": ExpressjamLogGroup}
+                awslogs-stream-prefix: ecs
+    ExecutionRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName: ${{self:service}}-${{self:provider.stage}}-ExecutionRole
         AssumeRolePolicyDocument:
-          Version: "2008-10-17"
           Statement:
             - Effect: Allow
               Principal:
-                Service: "ecs-tasks.amazonaws.com"
-              Action: "sts:AssumeRole"
-        Policies:
-          - PolicyName: AmazonECSTaskExecutionRolePolicy
-            PolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Sid: ECSAllowECRAndLogs
-                  Effect: Allow
-                  Action:
-                    - ecr:GetAuthorizationToken
-                    - ecr:BatchCheckLayerAvailability
-                    - ecr:GetDownloadUrlForLayer
-                    - ecr:BatchGetImage
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                  Resource: "*"
+                Service: ecs-tasks.amazonaws.com
+              Action: 'sts:AssumeRole'
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+    TaskRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${{self:service}}-${{self:provider.stage}}-TaskRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ecs-tasks.amazonaws.com
+              Action: 'sts:AssumeRole'
+    AutoScalingRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${{self:service}}-${{self:provider.stage}}-AutoScalingRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ecs-tasks.amazonaws.com
+              Action: 'sts:AssumeRole'
+        ManagedPolicyArns:
+          - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+    ContainerSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: ${{self:service}}-${{self:provider.stage}}-ContainerSecurityGroup
+        VpcId: ${{self:custom.VpcId}}
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 5000
+            ToPort: 5000
+            SourceSecurityGroupId: {"Ref": LoadBalancerSecurityGroup}
+          - IpProtocol: tcp
+            FromPort: 3000
+            ToPort: 3000
+            SourceSecurityGroupId: {"Ref": LoadBalancerSecurityGroup}
+    LoadBalancerSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: ${{self:service}}-${{self:provider.stage}}-LoadBalancerSecurityGroup
+        VpcId: ${{self:custom.VpcId}}
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+    LoadBalancer:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Properties:
+        LoadBalancerAttributes:
+          - Key: idle_timeout.timeout_seconds
+            Value: 60
+        Name: ${{self:service}}-alb
+        Scheme: internet-facing
+        SecurityGroups:
+          - {"Ref": LoadBalancerSecurityGroup}
+        Subnets: {"Fn::Split": [',', '${{self:custom.SubnetIds}}']}
+    FlaskjamService:
+      Type: AWS::ECS::Service
+      DependsOn:
+        - ListenerHTTP
+      Properties:
+        ServiceName: flaskjam-${{self:provider.stage}}-service
+        Cluster: {"Ref": Cluster}
+        TaskDefinition: {"Ref": FlaskjamTaskDefinition}
+        DeploymentConfiguration:
+          MinimumHealthyPercent: 100
+          MaximumPercent: 200
+        DesiredCount: 2
+        # This may need to be adjusted if the container takes a while to start up
+        HealthCheckGracePeriodSeconds: 30
+        LaunchType: FARGATE
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            # change to DISABLED if you're using private subnets that have access to a NAT gateway
+            AssignPublicIp: ENABLED
+            Subnets: {"Fn::Split": [',', '${{self:custom.SubnetIds}}']}
+            SecurityGroups:
+              - {"Ref": ContainerSecurityGroup}
+        LoadBalancers:
+          - ContainerName: flaskjam-${{self:provider.stage}}-container
+            ContainerPort: 5000
+            TargetGroupArn: {"Ref": FlaskjamTargetGroup}
+    ExpressjamService:
+      Type: AWS::ECS::Service
+      DependsOn:
+        - ListenerHTTP
+      Properties:
+        ServiceName: expressjam-${{self:provider.stage}}-service
+        Cluster: {"Ref": Cluster}
+        TaskDefinition: {"Ref": ExpressjamTaskDefinition}
+        DeploymentConfiguration:
+          MinimumHealthyPercent: 100
+          MaximumPercent: 200
+        DesiredCount: 2
+        # This may need to be adjusted if the container takes a while to start up
+        HealthCheckGracePeriodSeconds: 30
+        LaunchType: FARGATE
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            # change to DISABLED if you're using private subnets that have access to a NAT gateway
+            AssignPublicIp: ENABLED
+            Subnets: {"Fn::Split": [',', '${{self:custom.SubnetIds}}']}
+            SecurityGroups:
+              - {"Ref": ContainerSecurityGroup}
+        LoadBalancers:
+          - ContainerName: expressjam-${{self:provider.stage}}-container
+            ContainerPort: 3000
+            TargetGroupArn: {"Ref": ExpressjamTargetGroup}
+    FlaskjamTargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 10
+        HealthCheckPath: /health
+        HealthCheckTimeoutSeconds: 5
+        UnhealthyThresholdCount: 2
+        HealthyThresholdCount: 2
+        Name: flaskjam-${{self:provider.stage}}-target
+        Port: 5000
+        Protocol: HTTP
+        TargetGroupAttributes:
+          - Key: deregistration_delay.timeout_seconds
+            Value: 60 # default is 300
+        TargetType: ip
+        VpcId: ${{self:custom.VpcId}}
+    ExpressjamTargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 10
+        HealthCheckPath: /health
+        HealthCheckTimeoutSeconds: 5
+        UnhealthyThresholdCount: 2
+        HealthyThresholdCount: 2
+        Name: expressjam-${{self:provider.stage}}-target
+        Port: 3000
+        Protocol: HTTP
+        TargetGroupAttributes:
+          - Key: deregistration_delay.timeout_seconds
+            Value: 60 # default is 300
+        TargetType: ip
+        VpcId: ${{self:custom.VpcId}}
+    ListenerHTTP:
+      Type: AWS::ElasticLoadBalancingV2::Listener
+      Properties:
+        DefaultActions:
+          - TargetGroupArn: {"Ref": ExpressjamTargetGroup}
+            Type: forward
+        LoadBalancerArn: {"Ref": LoadBalancer}
+        Port: 80
+        Protocol: HTTP
+    FlaskjamListenerRule:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Properties:
+        Actions:
+          - TargetGroupArn: {"Ref": FlaskjamTargetGroup}
+            Type: forward
+        Conditions:
+          - Field: path-pattern
+            PathPatternConfig:
+              Values:
+                - /flask*
+        ListenerArn: {"Ref": ListenerHTTP}
+        Priority: 2
+    ExpressjamListenerRule:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Properties:
+        Actions:
+          - TargetGroupArn: {"Ref": ExpressjamTargetGroup}
+            Type: forward
+        Conditions:
+          - Field: path-pattern
+            PathPatternConfig:
+              Values:
+                - /express*
+        ListenerArn: {"Ref": ListenerHTTP}
+        Priority: 1
+    FlaskjamLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: '/ecs/flaskjam-${{self:provider.stage}}-TaskDefinition'
+    ExpressjamLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: '/ecs/expressjam-${{self:provider.stage}}-TaskDefinition'
+    FlaskjamAutoScalingTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MinCapacity: 2
+        MaxCapacity: 100
+        ResourceId: {"Fn::Join": ['/', ['service', {"Ref": Cluster}, {"Fn::GetAtt": [FlaskjamService, Name]}]]}
+        ScalableDimension: ecs:service:DesiredCount
+        ServiceNamespace: ecs
+        # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
+        RoleARN: { "Fn::GetAtt": [AutoScalingRole, Arn] }
+    FlaskjamAutoScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: flaskjam-${{self:provider.stage}}-AutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: {"Ref": FlaskjamAutoScalingTarget}
+        TargetTrackingScalingPolicyConfiguration:
+          PredefinedMetricSpecification:
+            PredefinedMetricType: ECSServiceAverageCPUUtilization
+          ScaleInCooldown: 10
+          ScaleOutCooldown: 10
+          TargetValue: 90
+    ExpressjamAutoScalingTarget:
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MinCapacity: 2
+        MaxCapacity: 100
+        ResourceId: {"Fn::Join": ['/', ['service', {"Ref": Cluster}, {"Fn::GetAtt": [ExpressjamService, Name]}]]}
+        ScalableDimension: ecs:service:DesiredCount
+        ServiceNamespace: ecs
+        # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
+        RoleARN: { "Fn::GetAtt": [AutoScalingRole, Arn] }
+    ExpressjamAutoScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: expressjam-${{self:provider.stage}}-AutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: {"Ref": ExpressjamAutoScalingTarget}
+        TargetTrackingScalingPolicyConfiguration:
+          PredefinedMetricSpecification:
+            PredefinedMetricType: ECSServiceAverageCPUUtilization
+          ScaleInCooldown: 10
+          ScaleOutCooldown: 10
+          TargetValue: 90
 
 custom:
   # Custom staging profiles. You may access or modify these credentials in ~/.aws/credentials
@@ -53,3 +320,6 @@ custom:
     development: gobear
 
   accountId: ${AWS::AccountId}
+
+  VpcId: ${{env:DEFAULT_VPC_ID}}
+  SubnetIds: ${{env:DEFAULT_SUBNET_IDS}}

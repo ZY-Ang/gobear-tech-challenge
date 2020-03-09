@@ -16,6 +16,7 @@ executors:
 orbs:
   aws-cli: circleci/aws-cli@0.1.22
   aws-ecr: circleci/aws-ecr@6.7.1
+  aws-ecs: circleci/aws-ecs@1.1.0
 
 commands:
   configure_aws:
@@ -102,6 +103,11 @@ jobs:
           profile-name: gobear
           repo: flaskjam-prod
           tag: 'latest,$CIRCLE_BUILD_NUM'
+      - aws-ecs/update-service:
+          family: flaskjam-prod-service
+          cluster-name: flaskjam-prod-cluster
+          container-image-name-updates: 'container=flaskjam-prod-service,tag=latest'
+
   express_test_build_deploy:
     <<: *config_project_defaults
     executor: node_default
@@ -116,7 +122,7 @@ jobs:
             echo "export EXPRESSJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod ExpressjamDBEndpoint)" >> $BASH_ENV
             echo "export FLASKJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod FlaskjamDBEndpoint)" >> $BASH_ENV
       - run:
-          name: Debug endpoint environment variables
+          name: Debug environment variables
           command: |
             echo $AWS_ECR_ACCOUNT_URL
             echo $EXPRESSJAM_DB_ENDPOINT
@@ -136,6 +142,10 @@ jobs:
           profile-name: gobear
           repo: expressjam-prod
           tag: 'latest,$CIRCLE_BUILD_NUM'
+      - aws-ecs/update-service:
+          family: flaskjam-prod-service
+          cluster-name: flaskjam-prod-cluster
+          container-image-name-updates: 'container=expressjam-prod-service,tag=latest'
 
   arch_deploy_or_update:
     <<: *config_project_defaults
@@ -145,20 +155,35 @@ jobs:
       - configure_aws
       - install_root_deps
       - run:
+          name: Setup dependent environment variables from VPC
+          command: |
+            echo "export DEFAULT_VPC_ID=$(node ~/repo/vpc.js vpc)" >> $BASH_ENV
+            echo "export DEFAULT_SUBNET_IDS=$(node ~/repo/vpc.js subnet)" >> $BASH_ENV
+      - run:
+          name: Debug environment variables
+          command: |
+            echo $DEFAULT_VPC_ID
+            echo $DEFAULT_SUBNET_IDS
+      - run:
           working_directory: ~/repo
           command: npm run deploy-db
       - run:
           working_directory: ~/repo
           command: npm run deploy-app
+      - run:
+          name: Output ALB endpoint
+          command: node ~/repo/env.js gb-challenge-app-prod AlbEndpoint
 
 workflows:
   version: 2
   master_flow:
     jobs:
-      - arch_deploy_or_update:
-          <<: *master_only
       - ecr_deploy_or_update:
           <<: *master_only
+      - arch_deploy_or_update:
+          <<: *master_only
+          requires:
+            - ecr_deploy_or_update
       - flask_test_build_deploy:
           requires:
             - arch_deploy_or_update

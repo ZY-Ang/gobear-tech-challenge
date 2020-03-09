@@ -49,7 +49,7 @@ resources:
         MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
         MultiAZ: true
         PubliclyAccessible: true
-        SourceRegion: ap-northeast
+        SourceRegion: ${{self:provider.region}}
         StorageType: gp2
         UseDefaultProcessorFeatures: true
     FlaskjamMySqlRDSInstance:
@@ -78,7 +78,7 @@ resources:
         MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
         MultiAZ: true
         PubliclyAccessible: true
-        SourceRegion: ap-northeast
+        SourceRegion: ${{self:provider.region}}
         StorageType: gp2
         UseDefaultProcessorFeatures: true
     RdsMonitoringRole:
