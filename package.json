@@ -1,0 +1,29 @@
+{
+  "name": "gobear-tech-challenge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "serverless.yml",
+  "scripts": {
+    "deploy-ecr": "cd arch/ecr && serverless deploy --aws-profile gobear --stage prod",
+    "deploy-app": "cd arch/app && serverless deploy --aws-profile gobear --stage prod",
+    "deploy-db": "cd arch/database && serverless deploy --aws-profile gobear --stage prod"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZY-Ang/gobear-tech-challenge.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ZY-Ang/gobear-tech-challenge/issues"
+  },
+  "homepage": "https://github.com/ZY-Ang/gobear-tech-challenge#readme",
+  "devDependencies": {
+    "aws-sdk": "^2.635.0",
+    "serverless": "^1.65.0",
+    "serverless-cloudformation-changesets": "0.0.2"
+  },
+  "dependencies": {
+    "shelljs": "^0.8.3"
+  }
+}
