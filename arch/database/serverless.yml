@@ -7,7 +7,7 @@ provider:
   # See link for more information:
   #     https://serverless.com/framework/docs/providers/aws/guide/credentials/
   stage: ${{opt:stage, self:custom.defaultStage}}
-  region: ${{opt:region, self:custom.defaultRegion}}
+  region: ${{opt:region, env:AWS_REGION, self:custom.defaultRegion}}
   profile: ${{opt:aws-profile, self:custom.profiles.${{self:provider.stage}}}}
   # See link for more information:
   #     https://serverless.com/framework/docs/providers/aws/guide/functions#versioning-deployed-functions

@@ -5,7 +5,7 @@ provider:
   runtime: nodejs12.x
   variableSyntax: "\\${{([ ~:a-zA-Z0-9._\\'\",\\-\\/\\(\\)]+?)}}"
   stage: ${{opt:stage, self:custom.defaultStage}}
-  region: ${{opt:region, self:custom.defaultRegion}}
+  region: ${{opt:region, env:AWS_REGION, self:custom.defaultRegion}}
   profile: ${{opt:aws-profile, self:custom.profiles.${{self:provider.stage}}}}
   environment:
     NODE_ENV: ${{self:provider.stage}}

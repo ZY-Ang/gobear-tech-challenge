@@ -5,7 +5,7 @@ provider:
   runtime: nodejs12.x
   variableSyntax: "\\${{([ ~:a-zA-Z0-9._\\'\",\\-\\/\\(\\)]+?)}}"
   stage: ${{opt:stage, self:custom.defaultStage}}
-  region: ${{opt:region, self:custom.defaultRegion}}
+  region: ${{opt:region, env:AWS_REGION, self:custom.defaultRegion}}
   profile: ${{opt:aws-profile, self:custom.profiles.${{self:provider.stage}}}}
   environment:
     NODE_ENV: ${{self:provider.stage}}
@@ -21,7 +21,7 @@ resources:
     Cluster:
       Type: AWS::ECS::Cluster
       Properties:
-        ClusterName: ${{self:service}}-cluster
+        ClusterName: ${{self:service}}-${{self:provider.stage}}-cluster
     FlaskjamTaskDefinition:
       Type: AWS::ECS::TaskDefinition
       DependsOn: FlaskjamLogGroup
@@ -192,9 +192,9 @@ resources:
     FlaskjamTargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
       Properties:
-        HealthCheckIntervalSeconds: 10
+        HealthCheckIntervalSeconds: 60
         HealthCheckPath: /health
-        HealthCheckTimeoutSeconds: 5
+        HealthCheckTimeoutSeconds: 15
         UnhealthyThresholdCount: 2
         HealthyThresholdCount: 2
         Name: flaskjam-${{self:provider.stage}}-target
@@ -208,9 +208,9 @@ resources:
     ExpressjamTargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
       Properties:
-        HealthCheckIntervalSeconds: 10
+        HealthCheckIntervalSeconds: 60
         HealthCheckPath: /health
-        HealthCheckTimeoutSeconds: 5
+        HealthCheckTimeoutSeconds: 15
         UnhealthyThresholdCount: 2
         HealthyThresholdCount: 2
         Name: expressjam-${{self:provider.stage}}-target

@@ -16,7 +16,6 @@ executors:
 orbs:
   aws-cli: circleci/aws-cli@0.1.22
   aws-ecr: circleci/aws-ecr@6.7.1
-  aws-ecs: circleci/aws-ecs@1.1.0
 
 commands:
   configure_aws:
@@ -103,10 +102,6 @@ jobs:
           profile-name: gobear
           repo: flaskjam-prod
           tag: 'latest,$CIRCLE_BUILD_NUM'
-      - aws-ecs/update-service:
-          family: flaskjam-prod-service
-          cluster-name: flaskjam-prod-cluster
-          container-image-name-updates: 'container=flaskjam-prod-service,tag=latest'
 
   express_test_build_deploy:
     <<: *config_project_defaults
@@ -142,12 +137,19 @@ jobs:
           profile-name: gobear
           repo: expressjam-prod
           tag: 'latest,$CIRCLE_BUILD_NUM'
-      - aws-ecs/update-service:
-          family: flaskjam-prod-service
-          cluster-name: flaskjam-prod-cluster
-          container-image-name-updates: 'container=expressjam-prod-service,tag=latest'
 
-  arch_deploy_or_update:
+  db_deploy_or_update:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run:
+          working_directory: ~/repo
+          command: npm run deploy-db
+
+  app_deploy_or_update:
     <<: *config_project_defaults
     executor: node_default
     steps:
@@ -166,10 +168,12 @@ jobs:
             echo $DEFAULT_SUBNET_IDS
       - run:
           working_directory: ~/repo
-          command: npm run deploy-db
-      - run:
-          working_directory: ~/repo
           command: npm run deploy-app
+      - run:
+          name: Update ECS services
+          command: |
+            aws ecs update-service --cluster gb-challenge-app-prod-cluster --service flaskjam-prod-service --region $AWS_REGION --profile gobear --force-new-deployment
+            aws ecs update-service --cluster gb-challenge-app-prod-cluster --service expressjam-prod-service --region $AWS_REGION --profile gobear --force-new-deployment
       - run:
           name: Output ALB endpoint
           command: node ~/repo/env.js gb-challenge-app-prod AlbEndpoint
@@ -180,15 +184,19 @@ workflows:
     jobs:
       - ecr_deploy_or_update:
           <<: *master_only
-      - arch_deploy_or_update:
+      - db_deploy_or_update:
           <<: *master_only
           requires:
             - ecr_deploy_or_update
       - flask_test_build_deploy:
           requires:
-            - arch_deploy_or_update
+            - db_deploy_or_update
             - ecr_deploy_or_update
       - express_test_build_deploy:
           requires:
-            - arch_deploy_or_update
+            - db_deploy_or_update
             - ecr_deploy_or_update
+      - app_deploy_or_update:
+          requires:
+            - flask_test_build_deploy
+            - express_test_build_deploy
