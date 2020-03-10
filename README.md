@@ -18,9 +18,10 @@
 
 Important changes to core code - flask application can't create new note without creating a pad first.
 I would probably fix the ORM-MySQL bindings if I don't have the time constraints. The database is
-publicly accessible from the internet but should work even without the `PubliclyAccessible` field set
-to `false` in `/arch/database/serverless.yml` as all resources are running within the same VPC. Only
-check if the security groups are configured correctly.
+publicly accessible from the internet. The `PubliclyAccessible` field set to `true` in
+`/arch/database/serverless.yml` as the docker build environment is outside of the AWS VPC. The file
+`dbingress.js` contains a script to automatically open up traffic on port 3306 in the default VPC's
+security group for the specified `$AWS_REGION`.
 
 ## Application
 

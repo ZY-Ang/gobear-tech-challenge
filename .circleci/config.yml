@@ -146,6 +146,9 @@ jobs:
       - configure_aws
       - install_root_deps
       - run:
+          name: Authorize default security group for port 3306 traffic (if necessary)
+          command: node ~/repo/dbingress.js
+      - run:
           working_directory: ~/repo
           command: npm run deploy-db
 
