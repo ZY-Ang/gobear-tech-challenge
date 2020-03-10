@@ -1,0 +1,205 @@
+version: 2.1
+
+defaults: &config_project_defaults
+  working_directory: ~/repo
+
+master_only: &master_only
+  filters:
+    branches:
+      only: master
+
+executors:
+  node_default:
+    docker:
+      - image: circleci/node:12.13.0
+
+orbs:
+  aws-cli: circleci/aws-cli@0.1.22
+  aws-ecr: circleci/aws-ecr@6.7.1
+
+commands:
+  configure_aws:
+    description: "Sets up AWS profiles, CLI and configuration"
+    steps:
+#      - run:
+#          name: Install AWS CLI v2
+#          working_directory: ~/
+#          command: |
+#            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#            unzip awscliv2.zip
+#            ./aws/install
+      - aws-cli/setup:
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+          profile-name: gobear
+#      - run:
+#          name: Configure AWS Access Key ID
+#          command: aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID --profile gobear
+#      - run:
+#          name: Configure AWS Secret Access Key
+#          command: aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY --profile gobear
+#      - run:
+#          name: Configure AWS default region
+#          command: aws configure set region $AWS_REGION --profile gobear
+  install_root_deps:
+    description: "Installs root npm dependencies. Requires checkout of repo into ~/repo first."
+    steps:
+      - restore_cache:
+          keys:
+            - v1-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}-{{ .Revision }}
+            - v1-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - v1-{{ arch }}-{{ .Branch }}
+            - v1-{{ arch }}
+      - run:
+          working_directory: ~/repo
+          command: npm install
+      - save_cache:
+          paths:
+            - ~/repo/node_modules
+          key: v1-{{ arch }}-{{ .Branch }}-{{ checksum "package-lock.json" }}-{{ .Revision }}
+
+jobs:
+  ecr_deploy_or_update:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run: npm run deploy-ecr
+  flask_test_build_deploy:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run:
+          name: Setup dependent environment variables from CF Stack Outputs
+          command: |
+            echo "export AWS_ECR_ACCOUNT_URL=$(node ~/repo/env.js gb-challenge-ecr-prod ECRAccountUri)" >> $BASH_ENV
+            echo "export EXPRESSJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod ExpressjamDBEndpoint)" >> $BASH_ENV
+            echo "export FLASKJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod FlaskjamDBEndpoint)" >> $BASH_ENV
+      - run:
+          name: Debug endpoint environment variables
+          command: |
+            echo $AWS_ECR_ACCOUNT_URL
+            echo $EXPRESSJAM_DB_ENDPOINT
+            echo $FLASKJAM_DB_ENDPOINT
+      - aws-ecr/build-and-push-image:
+          path: ~/repo/services/notejam-flask
+          account-url: AWS_ECR_ACCOUNT_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          region: AWS_REGION
+          setup-remote-docker: true
+          extra-build-args: "--build-arg environment=production
+            --build-arg dbuser=$FLASKJAM_DB_USER
+            --build-arg dbpass=$FLASKJAM_DB_PASS
+            --build-arg dbendpoint=$FLASKJAM_DB_ENDPOINT
+            --build-arg dbschema=$FLASKJAM_DB_SCHEMA"
+          profile-name: gobear
+          repo: flaskjam-prod
+          tag: 'latest,$CIRCLE_BUILD_NUM'
+
+  express_test_build_deploy:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run:
+          name: Setup dependent environment variables from CF Stack Outputs
+          command: |
+            echo "export AWS_ECR_ACCOUNT_URL=$(node ~/repo/env.js gb-challenge-ecr-prod ECRAccountUri)" >> $BASH_ENV
+            echo "export EXPRESSJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod ExpressjamDBEndpoint)" >> $BASH_ENV
+            echo "export FLASKJAM_DB_ENDPOINT=$(node ~/repo/env.js gb-challenge-db-prod FlaskjamDBEndpoint)" >> $BASH_ENV
+      - run:
+          name: Debug environment variables
+          command: |
+            echo $AWS_ECR_ACCOUNT_URL
+            echo $EXPRESSJAM_DB_ENDPOINT
+            echo $FLASKJAM_DB_ENDPOINT
+      - aws-ecr/build-and-push-image:
+          path: ~/repo/services/notejam-express
+          account-url: AWS_ECR_ACCOUNT_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          region: AWS_REGION
+          setup-remote-docker: true
+          extra-build-args: "--build-arg environment=production
+            --build-arg dbuser=$EXPRESSJAM_DB_USER
+            --build-arg dbpass=$EXPRESSJAM_DB_PASS
+            --build-arg dbendpoint=$EXPRESSJAM_DB_ENDPOINT
+            --build-arg dbschema=$EXPRESSJAM_DB_SCHEMA"
+          profile-name: gobear
+          repo: expressjam-prod
+          tag: 'latest,$CIRCLE_BUILD_NUM'
+
+  db_deploy_or_update:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run:
+          name: Authorize default security group for port 3306 traffic (if necessary)
+          command: node ~/repo/dbingress.js
+      - run:
+          working_directory: ~/repo
+          command: npm run deploy-db
+
+  app_deploy_or_update:
+    <<: *config_project_defaults
+    executor: node_default
+    steps:
+      - checkout
+      - configure_aws
+      - install_root_deps
+      - run:
+          name: Setup dependent environment variables from VPC
+          command: |
+            echo "export DEFAULT_VPC_ID=$(node ~/repo/vpc.js vpc)" >> $BASH_ENV
+            echo "export DEFAULT_SUBNET_IDS=$(node ~/repo/vpc.js subnet)" >> $BASH_ENV
+      - run:
+          name: Debug environment variables
+          command: |
+            echo $DEFAULT_VPC_ID
+            echo $DEFAULT_SUBNET_IDS
+      - run:
+          working_directory: ~/repo
+          command: npm run deploy-app
+      - run:
+          name: Update ECS services
+          command: |
+            aws ecs update-service --cluster gb-challenge-app-prod-cluster --service flaskjam-prod-service --region $AWS_REGION --profile gobear --force-new-deployment
+            aws ecs update-service --cluster gb-challenge-app-prod-cluster --service expressjam-prod-service --region $AWS_REGION --profile gobear --force-new-deployment
+      - run:
+          name: Output ALB endpoint
+          command: node ~/repo/env.js gb-challenge-app-prod AlbEndpoint
+
+workflows:
+  version: 2
+  master_flow:
+    jobs:
+      - ecr_deploy_or_update:
+          <<: *master_only
+      - db_deploy_or_update:
+          <<: *master_only
+          requires:
+            - ecr_deploy_or_update
+      - flask_test_build_deploy:
+          requires:
+            - db_deploy_or_update
+            - ecr_deploy_or_update
+      - express_test_build_deploy:
+          requires:
+            - db_deploy_or_update
+            - ecr_deploy_or_update
+      - app_deploy_or_update:
+          requires:
+            - flask_test_build_deploy
+            - express_test_build_deploy
