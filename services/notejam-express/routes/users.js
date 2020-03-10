@@ -1,14 +1,13 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('http')
 var orm = require('orm');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
-var bcrypt = require('bcrypt');
+var bcrypt = require('bcryptjs');
 var nodemailer = require('nodemailer');
 var stubTransport = require('nodemailer-stub-transport');
 
-var helpers = require('../helpers')
+var helpers = require('../helpers');
 var settings = require('../settings');
 
 // Sign Up
@@ -29,7 +28,7 @@ router.post('/signup', function(req, res) {
         'success',
         'User is successfully created. Now you can sign in.'
       );
-      return res.redirect('/signin');
+      return res.redirect('/express/signin');
     }
     res.render('users/signup');
   });
@@ -52,11 +51,11 @@ router.post('/signin', function(req, res, next) {
       if (err) { return next(err) }
       if (!user) {
         req.flash('error', info.message);
-        return res.redirect('/signin')
+        return res.redirect('/express/signin')
       }
       req.logIn(user, function(err) {
         if (err) { return next(err); }
-        return res.redirect('/');
+        return res.redirect('/express');
       });
     })(req, res, next);
   } else {
@@ -86,7 +85,7 @@ router.post('/settings', function(req, res, next) {
         'error',
         'Current password is not correct'
       );
-      return res.redirect('/settings');
+      return res.redirect('/express/settings');
     }
     var hash = generateHash(req.param('password'));
     req.user.save({password: hash}, function(err) {
@@ -94,7 +93,7 @@ router.post('/settings', function(req, res, next) {
         'success',
         'Password is successfully changed'
       );
-      return res.redirect('/');
+      return res.redirect('/express');
     })
   } else {
     res.locals.errors = errors;
@@ -124,14 +123,14 @@ router.post('/forgot-password', function(req, res) {
           'success',
           'New password sent to your inbox'
         );
-        return res.redirect('/signin');
+        return res.redirect('/express/signin');
       });
     } else {
       req.flash(
         'error',
         'No user with given email found'
       );
-      return res.redirect('/forgot-password');
+      return res.redirect('/express/forgot-password');
     }
   }));
 });
@@ -139,7 +138,7 @@ router.post('/forgot-password', function(req, res) {
 // Sign Out
 router.get('/signout', function(req, res) {
   req.logout();
-  res.redirect('/signin');
+  res.redirect('/express/signin');
 });
 
 
@@ -178,7 +177,7 @@ function findByUsername(username, fn) {
     db.load("../models", function (err) {
       var User = db.models.users;
       db.models.users.find({email: username}, function (err, users) {
-        if (users.length) {
+        if (users && users.length) {
           return fn(null, users[0]);
         } else {
           return fn(null, null);

@@ -38,7 +38,7 @@ router.post('/notes/create', helpers.loginRequired, function(req, res) {
         'success',
         'Note is successfully created'
       );
-      return res.redirect('/');
+      return res.redirect('/express');
     }
     res.render('notes/create');
   });
@@ -85,7 +85,7 @@ router.post('/notes/:id/edit', helpers.loginRequired, function(req, res) {
         'success',
         'Note is successfully updated'
       );
-      res.redirect('/notes/' + req.note.id);
+      res.redirect('/express/notes/' + req.note.id);
     }
   });
 });
@@ -101,7 +101,7 @@ router.post('/notes/:id/delete', helpers.loginRequired, function(req, res) {
       'success',
       'Note is successfully deleted'
     );
-    res.redirect('/');
+    res.redirect('/express');
   });
 });
 

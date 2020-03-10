@@ -20,7 +20,7 @@ router.post('/pads/create', helpers.loginRequired, function(req, res) {
         'success',
         'Pad is successfully created'
       );
-      return res.redirect('/');
+      return res.redirect('/express');
     }
     res.render('pads/create');
   });
@@ -70,7 +70,7 @@ router.post('/pads/:id/edit', helpers.loginRequired, function(req, res) {
         'success',
         'Pad is successfully updated'
       );
-      res.redirect('/');
+      res.redirect('/express');
     }
   });
 });
@@ -86,7 +86,7 @@ router.post('/pads/:id/delete', helpers.loginRequired, function(req, res) {
       'success',
       'Pad is successfully deleted'
     );
-    res.redirect('/');
+    res.redirect('/express');
   });
 });
 

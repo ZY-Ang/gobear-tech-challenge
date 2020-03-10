@@ -10,6 +10,7 @@ var orm = require('orm');
 var expressValidator = require('express-validator');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
+var AWSXRay = require('aws-xray-sdk');
 
 var users = require('./routes/users');
 var pads = require('./routes/pads');
@@ -33,11 +34,12 @@ app.use(session({cookie: { maxAge: 60000 }, secret: 'secret'}));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/express', express.static(path.join(__dirname, 'public')));
+app.use(AWSXRay.express.openSegment(`notejam-express-${(process.env.NODE_ENV || 'testing')}`));
 
 // DB configuration
-var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database(settings.db);
+// var sqlite3 = require('sqlite3').verbose();
+// var db = new sqlite3.Database(settings.db);
 
 orm.settings.set("instance.returnAllErrors", true);
 app.use(orm.express(settings.dsn, {
@@ -56,7 +58,7 @@ app.use(function(req, res, next){
   res.locals.flash_messages = {
     'success': req.flash('success'),
     'error': req.flash('error')
-  }
+  };
   next();
 });
 
@@ -74,9 +76,15 @@ app.use(function(req, res, next){
   }
 });
 
-app.use('/', users);
-app.use('/', pads);
-app.use('/', notes);
+app.get('/', function(req, res, next) {
+  res.redirect('/express');
+});
+app.all('/health', function (req, res) {
+  res.status(200).send();
+});
+app.use('/express', users);
+app.use('/express', pads);
+app.use('/express', notes);
 
 /// catch 404 and forward to error handler
 app.use(function(req, res, next) {

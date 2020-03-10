@@ -27,10 +27,10 @@ describe('Pad', function() {
   describe('can be', function() {
     it('successfully created', function(done) {
       agent
-        .post(config.url('/pads/create'))
+        .post(config.url('/express/pads/create'))
           .send({name: 'New pad'})
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/')]);
+            res.redirects.should.eql([config.url('/express'), config.url('/express/')]);
             res.text.should.containEql('Pad is successfully created');
             done();
           });
@@ -38,10 +38,10 @@ describe('Pad', function() {
 
     it('successfully edited', function(done) {
       agent
-        .post(config.url('/pads/1/edit'))
+        .post(config.url('/express/pads/1/edit'))
           .send({name: 'New pad name'})
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/')]);
+            res.redirects.should.eql([config.url('/express'), config.url('/express/')]);
             res.text.should.containEql('Pad is successfully updated');
             done();
           });
@@ -49,9 +49,9 @@ describe('Pad', function() {
 
     it('successfully deleted', function(done) {
       agent
-        .post(config.url('/pads/2/delete'))
+        .post(config.url('/express/pads/2/delete'))
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/')]);
+            res.redirects.should.eql([config.url('/express'), config.url('/express/')]);
             res.text.should.containEql('Pad is successfully deleted');
             done();
           });
@@ -59,7 +59,7 @@ describe('Pad', function() {
 
     it('successfully viewed', function(done) {
       agent
-        .get(config.url('/pads/1'))
+        .get(config.url('/express/pads/1'))
           .end(function(error, res){
             res.should.have.status(200);
             res.text.should.containEql('Pad settings');
@@ -71,7 +71,7 @@ describe('Pad', function() {
   describe('can not be', function() {
     it('created if required fields are missing', function(done) {
       agent
-        .post(config.url('/pads/create'))
+        .post(config.url('/express/pads/create'))
           .send({name: ''})
           .end(function(error, res){
             res.text.should.containEql('Name is required');
@@ -81,7 +81,7 @@ describe('Pad', function() {
 
     it('edited if required fields are missing', function(done) {
       agent
-        .post(config.url('/pads/1/edit'))
+        .post(config.url('/express/pads/1/edit'))
           .send({name: ''})
           .end(function(error, res){
             res.text.should.containEql('Name is required');
@@ -96,7 +96,7 @@ describe('Pad', function() {
       );
       signed(function() {
         agent
-          .post(config.url('/pads/1/edit'))
+          .post(config.url('/express/pads/1/edit'))
             .send({name: 'new name'})
             .end(function(error, res){
               res.should.have.status(404);
@@ -112,7 +112,7 @@ describe('Pad', function() {
       );
       signed(function() {
         agent
-          .post(config.url('/pads/1/delete'))
+          .post(config.url('/express/pads/1/delete'))
             .end(function(error, res){
               res.should.have.status(404);
               done();
@@ -127,7 +127,7 @@ describe('Pad', function() {
       );
       signed(function() {
         agent
-          .get(config.url('/pads/1'))
+          .get(config.url('/express/pads/1'))
             .end(function(error, res){
               res.should.have.status(404);
               done();

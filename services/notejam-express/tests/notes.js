@@ -29,10 +29,10 @@ describe('Note', function() {
   describe('can be', function() {
     it('successfully created', function(done) {
       agent
-        .post(config.url('/notes/create'))
+        .post(config.url('/express/notes/create'))
           .send({name: 'New note', text: 'text', pad_id: 1})
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/')]);
+            res.redirects.should.eql([config.url('/express'), config.url('/express/')]);
             res.text.should.containEql('Note is successfully created');
             done();
           });
@@ -40,10 +40,10 @@ describe('Note', function() {
 
     it('successfully edited', function(done) {
       agent
-        .post(config.url('/notes/1/edit'))
+        .post(config.url('/express/notes/1/edit'))
           .send({name: 'New name', text: 'New text'})
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/notes/1')]);
+            res.redirects.should.eql([config.url('/express/notes/1')]);
             res.text.should.containEql('Note is successfully updated');
             done();
           });
@@ -51,9 +51,9 @@ describe('Note', function() {
 
     it('successfully deleted', function(done) {
       agent
-        .post(config.url('/notes/2/delete'))
+        .post(config.url('/express/notes/2/delete'))
           .end(function(error, res){
-            res.redirects.should.eql([config.url('/')]);
+            res.redirects.should.eql([config.url('/express'), config.url('/express/')]);
             res.text.should.containEql('Note is successfully deleted');
             done();
           });
@@ -61,7 +61,7 @@ describe('Note', function() {
 
     it('successfully viewed', function(done) {
       agent
-        .get(config.url('/notes/1'))
+        .get(config.url('/express/notes/1'))
           .end(function(error, res){
             res.should.have.status(200);
             done();
@@ -72,7 +72,7 @@ describe('Note', function() {
   describe('can not be', function() {
     it('created if required fields are missing', function(done) {
       agent
-        .post(config.url('/notes/create'))
+        .post(config.url('/express/notes/create'))
           .send({name: '', text: ''})
           .end(function(error, res){
             res.text.should.containEql('Name is required');
@@ -83,7 +83,7 @@ describe('Note', function() {
 
     it('edited if required fields are missing', function(done) {
       agent
-        .post(config.url('/notes/1/edit'))
+        .post(config.url('/express/notes/1/edit'))
           .send({name: '', text: ''})
           .end(function(error, res){
             res.text.should.containEql('Name is required');
@@ -99,7 +99,7 @@ describe('Note', function() {
       );
       signed(function() {
         agent
-          .post(config.url('/notes/1/edit'))
+          .post(config.url('/express/notes/1/edit'))
             .send({name: 'new name', text: 'new text'})
             .end(function(error, res){
               res.should.have.status(404);
@@ -115,7 +115,7 @@ describe('Note', function() {
       );
       signed(function() {
         agent
-          .post(config.url('/notes/1/delete'))
+          .post(config.url('/express/notes/1/delete'))
             .end(function(error, res){
               res.should.have.status(404);
               done();
@@ -130,7 +130,7 @@ describe('Note', function() {
       );
       signed(function() {
         agent
-          .get(config.url('/notes/1'))
+          .get(config.url('/express/notes/1'))
             .end(function(error, res){
               res.should.have.status(404);
               done();
