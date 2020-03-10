@@ -139,7 +139,7 @@ class PadTestCase(NotejamBaseTestCase):
         user = self.create_user(email='email@example.com', password='password')
         with signed_in_user(user) as c:
             response = c.post(url_for('create_pad'), data={'name': 'pad'})
-            self.assertRedirects(response, '/')
+            self.assertRedirects(response, '/flask')
             self.assertEquals(1, Pad.query.count())
 
     def test_create_fail_required_name(self):
@@ -221,7 +221,7 @@ class NoteTestCase(NotejamBaseTestCase):
         with signed_in_user(user) as c:
             response = c.post(
                 url_for('create_note'), data=self._get_note_data())
-            self.assertRedirects(response, '/')
+            self.assertRedirects(response, '/flask')
             self.assertEquals(1, Note.query.count())
 
     def test_create_fail_required_fields(self):

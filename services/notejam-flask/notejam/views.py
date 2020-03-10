@@ -17,7 +17,7 @@ def load_user(user_id):
     return User.query.get(user_id)
 
 
-@app.route('/')
+@app.route('/flask')
 @login_required
 def home():
     notes = (Note.query
@@ -27,7 +27,7 @@ def home():
     return render_template('notes/list.html', notes=notes)
 
 
-@app.route('/notes/create/', methods=['GET', 'POST'])
+@app.route('/flask/notes/create/', methods=['GET', 'POST'])
 @login_required
 def create_note():
     note_form = NoteForm(user=current_user, pad=request.args.get('pad'))
@@ -45,7 +45,7 @@ def create_note():
     return render_template('notes/create.html', form=note_form)
 
 
-@app.route('/notes/<int:note_id>/edit/', methods=['GET', 'POST'])
+@app.route('/flask/notes/<int:note_id>/edit/', methods=['GET', 'POST'])
 @login_required
 def edit_note(note_id):
     note = _get_user_object_or_404(Note, note_id, current_user)
@@ -63,14 +63,14 @@ def edit_note(note_id):
     return render_template('notes/edit.html', form=note_form)
 
 
-@app.route('/notes/<int:note_id>/')
+@app.route('/flask/notes/<int:note_id>/')
 @login_required
 def view_note(note_id):
     note = _get_user_object_or_404(Note, note_id, current_user)
     return render_template('notes/view.html', note=note)
 
 
-@app.route('/notes/<int:note_id>/delete/', methods=['GET', 'POST'])
+@app.route('/flask/notes/<int:note_id>/delete/', methods=['GET', 'POST'])
 @login_required
 def delete_note(note_id):
     note = _get_user_object_or_404(Note, note_id, current_user)
@@ -86,7 +86,7 @@ def delete_note(note_id):
     return render_template('notes/delete.html', note=note, form=delete_form)
 
 
-@app.route('/pads/create/', methods=['GET', 'POST'])
+@app.route('/flask/pads/create/', methods=['GET', 'POST'])
 @login_required
 def create_pad():
     pad_form = PadForm()
@@ -102,7 +102,7 @@ def create_pad():
     return render_template('pads/create.html', form=pad_form)
 
 
-@app.route('/pads/<int:pad_id>/edit/', methods=['GET', 'POST'])
+@app.route('/flask/pads/<int:pad_id>/edit/', methods=['GET', 'POST'])
 @login_required
 def edit_pad(pad_id):
     pad = _get_user_object_or_404(Pad, pad_id, current_user)
@@ -115,7 +115,7 @@ def edit_pad(pad_id):
     return render_template('pads/edit.html', form=pad_form, pad=pad)
 
 
-@app.route('/pads/<int:pad_id>/')
+@app.route('/flask/pads/<int:pad_id>/')
 @login_required
 def pad_notes(pad_id):
     pad = _get_user_object_or_404(Pad, pad_id, current_user)
@@ -126,7 +126,7 @@ def pad_notes(pad_id):
     return render_template('pads/note_list.html', pad=pad, notes=notes)
 
 
-@app.route('/pads/<int:pad_id>/delete/', methods=['GET', 'POST'])
+@app.route('/flask/pads/<int:pad_id>/delete/', methods=['GET', 'POST'])
 @login_required
 def delete_pad(pad_id):
     pad = _get_user_object_or_404(Pad, pad_id, current_user)
@@ -140,7 +140,7 @@ def delete_pad(pad_id):
 
 
 # @TODO use macro for form fields in template
-@app.route('/signin/', methods=['GET', 'POST'])
+@app.route('/flask/signin/', methods=['GET', 'POST'])
 def signin():
     form = SigninForm()
     if form.validate_on_submit():
@@ -154,13 +154,13 @@ def signin():
     return render_template('users/signin.html', form=form)
 
 
-@app.route('/signout/')
+@app.route('/flask/signout/')
 def signout():
     logout_user()
     return redirect(url_for('signin'))
 
 
-@app.route('/signup/', methods=['GET', 'POST'])
+@app.route('/flask/signup/', methods=['GET', 'POST'])
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
@@ -173,7 +173,7 @@ def signup():
     return render_template('users/signup.html', form=form)
 
 
-@app.route('/settings/', methods=['GET', 'POST'])
+@app.route('/flask/settings/', methods=['GET', 'POST'])
 @login_required
 def account_settings():
     form = ChangePasswordForm(user=current_user)
@@ -185,7 +185,7 @@ def account_settings():
     return render_template('users/settings.html', form=form)
 
 
-@app.route('/forgot-password/', methods=['GET', 'POST'])
+@app.route('/flask/forgot-password/', methods=['GET', 'POST'])
 def forgot_password():
     form = ForgotPasswordForm()
     if form.validate_on_submit():
