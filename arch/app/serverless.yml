@@ -71,7 +71,6 @@ resources:
     ExecutionRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: ${{self:service}}-${{self:provider.stage}}-ExecutionRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -83,7 +82,6 @@ resources:
     TaskRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: ${{self:service}}-${{self:provider.stage}}-TaskRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -93,7 +91,6 @@ resources:
     AutoScalingRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: ${{self:service}}-${{self:provider.stage}}-AutoScalingRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
