@@ -1,0 +1,128 @@
+service: gb-challenge-db
+
+provider:
+  name: aws
+  runtime: python3.6
+  variableSyntax: "\\${{([ ~:a-zA-Z0-9._\\'\",\\-\\/\\(\\)]+?)}}"
+  # See link for more information:
+  #     https://serverless.com/framework/docs/providers/aws/guide/credentials/
+  stage: ${{opt:stage, self:custom.defaultStage}}
+  region: ${{opt:region, env:AWS_REGION, self:custom.defaultRegion}}
+  profile: ${{opt:aws-profile, self:custom.profiles.${{self:provider.stage}}}}
+  # See link for more information:
+  #     https://serverless.com/framework/docs/providers/aws/guide/functions#versioning-deployed-functions
+  environment:
+    NODE_ENV: ${{self:provider.stage}}
+    STACK_PREFIX: ${{self:service}}-${{self:provider.stage}}
+
+
+resources:
+  Outputs:
+    ExpressjamDBEndpoint:
+      Value: { Fn::GetAtt: [ExpressjamMySqlRDSInstance, "Endpoint.Address"] }
+    FlaskjamDBEndpoint:
+      Value: { Fn::GetAtt: [FlaskjamMySqlRDSInstance, "Endpoint.Address"] }
+  Resources:
+    ExpressjamMySqlRDSInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        AllocatedStorage: 20
+        AllowMajorVersionUpgrade: true
+        AutoMinorVersionUpgrade: true
+        BackupRetentionPeriod: 35
+        DBInstanceClass: db.t2.micro
+        DBInstanceIdentifier: db-expressjam-${{self:provider.stage}}
+        DBName: ${{env:EXPRESSJAM_DB_SCHEMA}}
+        DeleteAutomatedBackups: true
+        DeletionProtection: true
+        EnableCloudwatchLogsExports:
+          - audit
+          - error
+          - general
+          - slowquery
+        Engine: mysql
+        EngineVersion: 5.7.22
+        MasterUsername: ${{env:EXPRESSJAM_DB_USER}}
+        MasterUserPassword: ${{env:EXPRESSJAM_DB_PASS}}
+        MaxAllocatedStorage: 1000
+        MonitoringInterval: 60
+        MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
+        MultiAZ: true
+        PubliclyAccessible: true
+        SourceRegion: ${{self:provider.region}}
+        StorageType: gp2
+        UseDefaultProcessorFeatures: true
+    FlaskjamMySqlRDSInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        AllocatedStorage: 20
+        AllowMajorVersionUpgrade: true
+        AutoMinorVersionUpgrade: true
+        BackupRetentionPeriod: 35
+        DBInstanceClass: db.t2.micro
+        DBInstanceIdentifier: db-flaskjam-${{self:provider.stage}}
+        DBName: ${{env:FLASKJAM_DB_SCHEMA}}
+        DeleteAutomatedBackups: true
+        DeletionProtection: true
+        EnableCloudwatchLogsExports:
+          - audit
+          - error
+          - general
+          - slowquery
+        Engine: mysql
+        EngineVersion: 5.7.22
+        MasterUsername: ${{env:FLASKJAM_DB_USER}}
+        MasterUserPassword: ${{env:FLASKJAM_DB_PASS}}
+        MaxAllocatedStorage: 1000
+        MonitoringInterval: 60
+        MonitoringRoleArn: {"Fn::GetAtt": ["RdsMonitoringRole", "Arn"]}
+        MultiAZ: true
+        PubliclyAccessible: true
+        SourceRegion: ${{self:provider.region}}
+        StorageType: gp2
+        UseDefaultProcessorFeatures: true
+    RdsMonitoringRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - monitoring.rds.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: AmazonRDSMonitoringPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Sid: EnableCreationAndManagementOfRDSCloudwatchLogGroups
+                  Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:PutRetentionPolicy
+                  Resource:
+                    - arn:aws:logs:*:*:log-group:RDS*
+                - Sid: EnableCreationAndManagementOfRDSCloudwatchLogStreams
+                  Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:DescribeLogStreams
+                    - logs:GetLogEvents
+                  Resource:
+                    - arn:aws:logs:*:*:log-group:RDS*:log-stream:*
+
+custom:
+  # Custom staging profiles. You may access or modify these credentials in ~/.aws/credentials
+  # See link for credentials documentation:
+  #     https://serverless.com/framework/docs/providers/aws/guide/credentials/
+  defaultStage: dev
+  defaultRegion: ap-northeast-1
+  profiles:
+    production: gobear
+    development: gobear
+
+  accountId: ${AWS::AccountId}
