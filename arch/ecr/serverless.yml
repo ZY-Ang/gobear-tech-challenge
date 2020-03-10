@@ -36,18 +36,15 @@ resources:
       # See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-repository.html
       Properties:
         RepositoryName: flaskjam-${{self:provider.stage}}
-        Tags:
-          - Key: stage
-            Value: ${{self:provider.stage}}
+        LifecyclePolicy:
+          LifecyclePolicyText: ${{self:custom.ecrLifecyclePolicy}}
     ExpressjamECRRepository:
       Type: AWS::ECR::Repository
       # See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-repository.html
       Properties:
         RepositoryName: expressjam-${{self:provider.stage}}
-        Tags:
-          - Key: stage
-            Value: ${{self:provider.stage}}
-
+        LifecyclePolicy:
+          LifecyclePolicyText: ${{self:custom.ecrLifecyclePolicy}}
 
 custom:
   # Custom staging profiles. You may access or modify these credentials in ~/.aws/credentials
@@ -60,3 +57,5 @@ custom:
     development: gobear
 
   accountId: ${AWS::AccountId}
+
+  ecrLifecyclePolicy: '{"rules":[{"rulePriority":1,"description":"Keep only latest 10 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
